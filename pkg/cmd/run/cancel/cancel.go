@@ -124,7 +124,13 @@ func runCancel(opts *CancelOptions) error {
 	if err != nil {
 		if httpErr, ok := errors.AsType[api.HTTPError](err); ok {
 			if httpErr.StatusCode == http.StatusConflict {
-				err = fmt.Errorf("Cannot cancel a workflow run that is completed")
+				// 409 covers more than a completed run: the API also refuses runs that
+				// are queued but have no jobs yet, and it says which in the body.
+				if httpErr.Message != "" {
+					err = fmt.Errorf("%s", httpErr.Message)
+				} else {
+					err = fmt.Errorf("Cannot cancel a workflow run that is completed")
+				}
 			}
 		}
 

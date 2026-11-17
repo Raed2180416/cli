@@ -157,6 +157,28 @@ func TestRunCancel(t *testing.T) {
 			},
 		},
 		{
+			name: "conflict with a message from the api",
+			opts: &CancelOptions{
+				RunID: "4567",
+			},
+			wantErr: true,
+			errMsg:  "Cannot cancel a workflow run that has not been queued yet",
+			httpStubs: func(reg *httpmock.Registry) {
+				reg.Register(
+					httpmock.REST("GET", "repos/OWNER/REPO/actions/runs/4567"),
+					httpmock.JSONResponse(completedRun))
+				reg.Register(
+					httpmock.REST("GET", "repos/OWNER/REPO/actions/workflows/123"),
+					httpmock.JSONResponse(shared.TestWorkflow))
+				reg.Register(
+					httpmock.REST("POST", "repos/OWNER/REPO/actions/runs/4567/cancel"),
+					httpmock.StatusJSONResponse(409, map[string]string{
+						"message": "Cannot cancel a workflow run that has not been queued yet",
+					}),
+				)
+			},
+		},
+		{
 			name: "prompt, no in progress runs",
 			opts: &CancelOptions{
 				Prompt: true,
